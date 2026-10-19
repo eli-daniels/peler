@@ -1,0 +1,309 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# peler
+
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/eli-daniels/peler/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/eli-daniels/peler/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
+peler is an R port of [pele](https://github.com/obsidianmd/pele), the
+[Mermaid](https://mermaid.js.org) renderer made by kepano at
+[Obsidian](https://obsidian.md). All the rendering is pele’s work. peler
+runs pele’s JavaScript bundle in
+[V8](https://cran.r-project.org/package=V8) and connects its SVG output
+to Quarto, R Markdown, Shiny and image files.
+
+This package will be updated as new versions of pele are released
+upstream.
+
+For the diagram syntax, the supported diagram types and the theming
+variables, read pele’s own documentation at
+[pele.run](https://pele.run):
+
+- [API](https://pele.run/api): render options and error handling
+- [Theming](https://pele.run/theming): every CSS variable and class name
+- [Security](https://pele.run/security): how pele handles untrusted
+  diagram text
+
+## Installation
+
+``` r
+# install.packages("pak")
+pak::pak("eli-daniels/peler")
+```
+
+## Quarto
+
+Load peler in a setup chunk. After that, a `pele` chunk renders the
+Mermaid text it contains:
+
+```` markdown
+---
+title: "Release process"
+format:
+  html: default
+  pdf: default
+---
+
+```{r}
+#| include: false
+library(peler)
+```
+
+```{pele}
+#| label: release
+#| echo: false
+flowchart LR
+  A[Commit] --> B{Tests pass?}
+  B -->|yes| C[Release]
+  B -->|no| D[Fix]
+```
+````
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-release-dark.svg"><img src="man/figures/README-release.svg" alt="A flowchart diagram"></picture>
+
+In HTML the diagram is inline SVG. In PDF it is a vector figure, and in
+Word a PNG. R Markdown works the same way.
+
+From an R chunk, call `pele()` on a string and print the result:
+
+``` r
+pele(c(
+  "sequenceDiagram",
+  "  Alice ->> Bob: Hello",
+  "  Bob -->> Alice: Hi!"
+))
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-hello-dark.svg"><img src="man/figures/README-hello.svg" alt="A sequence diagram"></picture>
+
+## Diagrams from data
+
+Mermaid is text, so R can write it. A data frame of flows becomes a
+Sankey diagram:
+
+``` r
+flows <- data.frame(
+  from = c("Screened", "Screened", "Enrolled", "Enrolled"),
+  to = c("Enrolled", "Excluded", "Completed", "Withdrew"),
+  n = c(120, 40, 95, 25)
+)
+pele(c("sankey", paste(flows$from, flows$to, flows$n, sep = ",")))
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-sankey-dark.svg"><img src="man/figures/README-sankey.svg" alt="A sankey diagram"></picture>
+
+A summary of `airquality` becomes a bar chart:
+
+``` r
+temp <- aggregate(Temp ~ Month, airquality, mean)
+pele(c(
+  "xychart",
+  '  title "Mean temperature in New York, 1973"',
+  sprintf("  x-axis [%s]", toString(month.abb[temp$Month])),
+  '  y-axis "Degrees Fahrenheit" 50 --> 90',
+  sprintf("  bar [%s]", toString(round(temp$Temp, 1)))
+))
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-xychart-dark.svg"><img src="man/figures/README-xychart.svg" alt="A xychart diagram"></picture>
+
+And a table of tasks becomes a Gantt chart:
+
+``` r
+tasks <- data.frame(
+  section = c("Setup", "Setup", "Trial", "Trial", "Analysis"),
+  task = c("Protocol", "Ethics review", "Recruitment", "Follow-up", "Statistics"),
+  days = c(30, 45, 60, 90, 30)
+)
+# Each task starts when the one before it ends
+rows <- sprintf(
+  "    %s :t%d, %s, %dd",
+  tasks$task, seq_len(nrow(tasks)),
+  c("2026-01-05", paste0("after t", seq_len(nrow(tasks) - 1))), tasks$days
+)
+sections <- split(rows, factor(tasks$section, unique(tasks$section)))
+pele(c(
+  "gantt",
+  "  title Clinical study",
+  "  dateFormat YYYY-MM-DD",
+  unlist(Map(function(name, rows) c(paste("  section", name), rows), names(sections), sections))
+))
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-gantt-dark.svg"><img src="man/figures/README-gantt.svg" alt="A gantt diagram"></picture>
+
+## More diagram types
+
+pele draws most Mermaid types. A raw string, `r"(...)"`, keeps the
+Mermaid text as it is written in a `pele` chunk:
+
+``` r
+pele(r"(
+mindmap
+  root((peler))
+    Quarto
+      HTML
+      PDF
+      Word
+    R Markdown
+    Shiny
+    Files
+      SVG
+      PNG
+      PDF
+)")
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-mindmap-dark.svg"><img src="man/figures/README-mindmap.svg" alt="A mindmap diagram"></picture>
+
+``` r
+pele(r"(
+quadrantChart
+  title Which plot?
+  x-axis Low effort --> High effort
+  y-axis Low value --> High value
+  quadrant-1 Plan it
+  quadrant-2 Do it now
+  quadrant-3 Skip it
+  quadrant-4 Delegate
+  Boxplot: [0.2, 0.8]
+  Volcano plot: [0.45, 0.9]
+  3D pie: [0.7, 0.1]
+  Heatmap: [0.75, 0.7]
+)")
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-quadrant-dark.svg"><img src="man/figures/README-quadrant.svg" alt="A quadrantChart diagram"></picture>
+
+``` r
+pele(r"(
+pie title Time spent on a figure
+  "Getting the data" : 45
+  "Plotting" : 15
+  "Moving the legend" : 40
+)")
+```
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="man/figures/README-pie-dark.svg"><img src="man/figures/README-pie.svg" alt="A pie diagram"></picture>
+
+## Files
+
+`pele_save()` picks the format from the file extension:
+
+``` r
+d <- pele("flowchart LR\n  A --> B")
+pele_save(d, "diagram.svg")
+pele_save(d, "diagram.png", scale = 2)
+pele_save(d, "diagram.pdf")
+```
+
+## Shiny
+
+A diagram is HTML, so `renderUI()` is enough. A syntax error shows up in
+the output in place of the diagram, with the line and a caret under the
+mistake.
+
+``` r
+library(shiny)
+library(peler)
+
+ui <- fluidPage(
+  textAreaInput("src", NULL, "flowchart LR\n  A --> B", rows = 4),
+  uiOutput("diagram")
+)
+
+server <- function(input, output, session) {
+  output$diagram <- renderUI(pele(input$src))
+}
+
+shinyApp(ui, server)
+```
+
+## Colours
+
+Without a theme, a diagram in HTML keeps pele’s CSS variables, so the
+page’s stylesheet sets its colours. This rule makes diagrams follow
+Quarto’s dark mode:
+
+``` css
+.quarto-dark .pele {
+  --pele-bg: #1c1b1a;
+  --pele-fg: #e6e4d9;
+  --pele-muted: #b7b5ac;
+  --pele-line: #cecdc3;
+  --pele-surface: #282726;
+  --pele-border: #575653;
+}
+```
+
+`pele_theme()` fixes the colours instead. peler writes them into the SVG
+and paints the background, so the diagram looks the same on any page and
+in any file. Variables you leave out keep pele’s defaults.
+
+``` r
+flexoki <- pele_theme(
+  bg = "#fffcf0", fg = "#100f0f", line = "#205ea6",
+  surface = "#f2f0e5", border = "#205ea6"
+)
+pele("flowchart LR\n  A[Mermaid text] --> B[SVG]", theme = flexoki)
+```
+
+<img src="man/figures/README-flexoki.svg" alt="A flowchart diagram">
+
+For every diagram in a document, set the option once:
+
+``` r
+options(peler.theme = flexoki)
+```
+
+A theme can hand single colours back to the page. `"inherit"` takes the
+page’s value of that pele variable, and a `var()` with a fallback
+follows any other page variable. Here the lines and borders stay blue,
+the text follows Bootstrap’s body colour, and the background comes from
+the page’s `.pele` rule, such as the dark mode one above:
+
+``` r
+pele_theme(
+  line = "#205ea6",
+  border = "#205ea6",
+  fg = "var(--bs-body-color, #1f1f1f)",
+  bg = "inherit"
+)
+```
+
+Files have no page, so there `"inherit"` gives pele’s default and a
+`var()` its fallback.
+
+Fonts are a `pele()` argument and not part of the theme. pele measures
+labels in the font to lay out the diagram, so changing the font
+afterwards would leave the boxes the wrong size.
+
+## Differences from pele in the browser
+
+- **Text widths.** pele measures text with a canvas when it runs in a
+  browser. V8 has no canvas, so pele estimates widths from Arial
+  metrics. A font much wider than Arial can overflow its boxes.
+- **One patched regex.** The V8 engine in the R package is built without
+  ICU, so it rejects Unicode property escapes such as `\p{L}`. pele uses
+  them once, to validate font names. `data-raw/update_pele.R` replaces
+  them with a character range when it vendors the bundle.
+- **CSS variables in files.** librsvg, which writes the PNG and PDF
+  files, ignores CSS variable definitions, so pele’s output would come
+  out black. peler writes the colour values into the SVG before
+  converting it.
+- **No `mount()` or zoom.** These need a browser DOM. peler only uses
+  pele’s `render()`.
+
+## Credits and license
+
+pele is copyright (c) 2026 kepano and is MIT licensed. Its bundle
+includes one Lucide icon under the ISC license. The bundled file is
+`inst/js/pele.global.js`, and `inst/COPYRIGHTS` has both notices. peler
+is MIT licensed.
+
+Report rendering bugs that also happen at [pele.run](https://pele.run)
+to [pele’s issue tracker](https://github.com/obsidianmd/pele/issues).
+Report problems with the R side here.
