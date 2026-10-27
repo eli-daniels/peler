@@ -11,6 +11,9 @@ pele_theme(...)
 variables without their \verb{--pele-} prefix, with \verb{_} for \code{-}:
 \itemize{
 \item \code{bg}, \code{fg}: background and text
+\item \code{fg_on_light}, \code{fg_on_dark}: text on fills the diagram text sets with
+\code{style}, \code{classDef}, or a sequence \code{rect} or \code{box}. 'pele' picks the
+one that contrasts more with the fill.
 \item \code{muted}: secondary text
 \item \code{line}: edges and arrows
 \item \code{surface}, \code{surface_alt}: node fills

@@ -18,6 +18,13 @@
 #'   are measured and drawn in. `NULL` uses the 'pele' defaults (`sans-serif`,
 #'   16). Widths are estimated from Arial metrics, so a font much wider than
 #'   Arial can overflow its boxes.
+#' @param font_family_mono Monospace font family. `NULL` uses `monospace`.
+#' @param monospace Parts of the diagram to measure and draw in
+#'   `font_family_mono`, so their boxes fit the wider text:
+#'   - `"members"`: attributes and methods in class diagrams
+#'   - `"attributes"`: attribute types, names and keys in ER diagrams
+#'   - `"files"`: file and directory names in tree view diagrams
+#'   - `"messages"`: message text in sequence diagrams
 #' @param theme A [pele_theme()] or `NULL`. Defaults to the `peler.theme`
 #'   option, so a document can set it once.
 #' @param id Prefix of the ids inside the SVG. The default comes from a hash
@@ -26,13 +33,16 @@
 #' @details
 #' ## Ids
 #'
-#' 'pele' uses `id` for two things:
+#' 'pele' uses `id` for three things:
 #'
 #' - When the diagram has an `accTitle` or `accDescr`, the SVG holds a
 #'   `<title>` and `<desc>` with ids `{id}-title` and `{id}-desc`, which screen
 #'   readers find through `aria-labelledby` and `aria-describedby`.
-#' - Cynefin diagrams seed their random region boundaries with it, so the id
-#'   changes how they look.
+#' - Sankey diagrams draw their links with gradients, which have ids
+#'   `{id}-sankey-` and a hash of the gradient. If `id` has characters other
+#'   than letters, digits, `_` and `-`, the links get plain colours instead.
+#' - Cynefin diagrams seed their random region boundaries with it, unless the
+#'   diagram sets its own `seed`, so the id changes how they look.
 #'
 #' Ids must be unique on a HTML page. The default, `pele-` and the start of
 #' an MD5 hash of `text`, gives the same id to the same text in every session,
@@ -47,7 +57,12 @@
 #'   Give one of them its own `id` if that matters.
 #' - Reusing one custom `id` for different diagrams on a page makes a screen
 #'   reader announce the first diagram's title for all of them.
-#' - Changing the `id` of a Cynefin diagram redraws its boundaries.
+#' - Two Sankey diagrams with the same id share the ids of the gradients they
+#'   have in common. Chrome can then draw the links of one with the
+#'   gradients of the other, which goes wrong when that one is hidden, as in
+#'   a closed tab.
+#' - Changing the `id` of a Cynefin diagram without its own `seed` redraws
+#'   its boundaries.
 #'
 #' @return A `pele` object: a list with `svg` (a string), `width` and
 #'   `height` in pixels, the diagram `type`, `theme` and `id`.
@@ -62,6 +77,8 @@
 pele <- function(text,
                  font_family = NULL,
                  font_size = NULL,
+                 font_family_mono = NULL,
+                 monospace = NULL,
                  theme = getOption("peler.theme"),
                  id = NULL) {
   if (!is.character(text) || anyNA(text)) {
@@ -72,6 +89,8 @@ pele <- function(text,
   }
   check_string(font_family, allow_null = TRUE)
   check_number(font_size, allow_null = TRUE)
+  check_string(font_family_mono, allow_null = TRUE)
+  check_monospace(monospace)
   check_string(id, allow_null = TRUE)
   check_theme(theme)
   text <- paste(text, collapse = "\n")
@@ -80,7 +99,13 @@ pele <- function(text,
   # does not renumber the others. Two diagrams share an id only if their text is the
   # same, and then their shared accessible title and description match anyway.
   id <- id %||% paste0("pele-", substr(cli::hash_md5(text), 1, 8))
-  options <- list(fontFamily = font_family, fontSize = font_size, idPrefix = id)
+  options <- list(
+    fontFamily = font_family, fontSize = font_size, fontFamilyMono = font_family_mono,
+    # A list, because V8 sends a vector of length 1 as a string, and pele reads
+    # `monospace` only when it is an array
+    monospace = if (!is.null(monospace)) as.list(monospace),
+    idPrefix = id
+  )
   # V8 would send a NULL to pele as an empty object, not as a missing option, and pele
   # would use it: a NULL font_size draws `font:[object Object]px`
   options <- options[!vapply(options, is.null, logical(1))]
@@ -88,20 +113,31 @@ pele <- function(text,
   out <- js_context()$call("peler_render", text, options)
   if (!isTRUE(out$ok)) abort_render(out)
 
-  # pele draws in sans-serif, without an error, when it rejects a font family. Asking
-  # for sans-serif gives the same SVG, so that case is not a fallback.
-  fell_back <- grepl("var(--pele-font,sans-serif)", out$svg, fixed = TRUE)
-  if (!is.null(font_family) && trimws(font_family) != "sans-serif" && fell_back) {
-    cli::cli_warn(c(
-      "Can't use {.arg font_family} {.val {font_family}}.",
-      x = "It must be a comma-separated list of font names, quoted or not.",
-      i = "Labels were measured and drawn in {.val sans-serif}."
-    ))
-  }
+  warn_font_fallback(font_family, "--pele-font", "sans-serif", out$svg)
+  warn_font_fallback(font_family_mono, "--pele-font-mono", "monospace", out$svg)
 
   structure(
     list(svg = out$svg, width = out$width, height = out$height, type = out$type, theme = theme, id = id),
     class = "pele"
+  )
+}
+
+#' Warn when pele rejected a font family
+#'
+#' pele draws in the generic family, without an error, when it rejects a font
+#' family. Asking for the generic family gives the same SVG, so that case is
+#' not a fallback.
+#' @noRd
+warn_font_fallback <- function(family, variable, fallback, svg, arg = rlang::caller_arg(family)) {
+  fell_back <- grepl(sprintf("var(%s,%s)", variable, fallback), svg, fixed = TRUE)
+  if (is.null(family) || trimws(family) == fallback || !fell_back) return(invisible())
+  cli::cli_warn(
+    c(
+      "Can't use {.arg {arg}} {.val {family}}.",
+      x = "It must be a comma-separated list of font names, quoted or not.",
+      i = "Labels were measured and drawn in {.val {fallback}}."
+    ),
+    call = rlang::caller_env()
   )
 }
 

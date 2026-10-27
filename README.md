@@ -15,8 +15,8 @@ runs pele’s JavaScript bundle in
 [V8](https://cran.r-project.org/package=V8) and connects its SVG output
 to Quarto, R Markdown, Shiny and image files.
 
-This package will be updated as new versions of pele are released
-upstream.
+peler 0.1.1 bundles pele 1.12.0. peler will be updated as new versions
+of pele are released upstream, and [NEWS.md](NEWS.md) lists the changes.
 
 For the diagram syntax, the supported diagram types and the theming
 variables, read pele’s own documentation at
@@ -279,7 +279,13 @@ Files have no page, so there `"inherit"` gives pele’s default and a
 
 Fonts are a `pele()` argument and not part of the theme. pele measures
 labels in the font to lay out the diagram, so changing the font
-afterwards would leave the boxes the wrong size.
+afterwards would leave the boxes the wrong size. For the same reason,
+`monospace` lists the parts to draw in the monospace font, such as class
+members or sequence messages:
+
+``` r
+pele(text, monospace = c("members", "messages"), font_family_mono = "Fira Code")
+```
 
 ## Differences from pele in the browser
 

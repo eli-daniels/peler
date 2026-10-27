@@ -21,12 +21,25 @@ test_that("font_family reaches the SVG", {
   expect_match(d$svg, "Fira Sans", fixed = TRUE)
 })
 
+test_that("monospace parts are measured and drawn in font_family_mono", {
+  seq <- "sequenceDiagram\n  Alice ->> Bob: a fairly long message"
+  plain <- pele(seq)
+  # One part, which has to reach pele as an array, not a string
+  mono <- pele(seq, monospace = "messages", font_family_mono = "Fira Code")
+  expect_match(mono$svg, "var(--pele-font-mono,Fira Code)", fixed = TRUE)
+  expect_match(mono$svg, "var(--_fm)", fixed = TRUE)
+  expect_no_match(plain$svg, "var(--_fm)", fixed = TRUE)
+  expect_gt(mono$width, plain$width)
+})
+
 test_that("pele() explains bad arguments and diagrams pele can't render", {
   expect_snapshot(error = TRUE, {
     pele(1)
     pele("  ")
     pele(flow, font_size = "big")
     pele(flow, theme = list(fg = "red"))
+    pele(flow, monospace = TRUE)
+    pele(flow, monospace = c("members", "mesages", "nodes"))
     pele("not a diagram")
     pele("sequenceDiagram\n  Alice ->> : hi")
     pele("flowchart LR\n  A --> B[oops")
@@ -35,8 +48,11 @@ test_that("pele() explains bad arguments and diagrams pele can't render", {
 })
 
 test_that("pele() warns when pele rejects the font family", {
-  expect_snapshot(d <- pele(flow, font_family = "Inter; color: red"))
-  expect_no_warning(pele(flow, font_family = "sans-serif"))
+  expect_snapshot({
+    d <- pele(flow, font_family = "Inter; color: red")
+    d <- pele(flow, font_family_mono = "Fira Code; color: red")
+  })
+  expect_no_warning(pele(flow, font_family = "sans-serif", font_family_mono = "monospace"))
 })
 
 test_that("render errors have a class per pele error code", {

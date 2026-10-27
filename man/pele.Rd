@@ -8,6 +8,8 @@ pele(
   text,
   font_family = NULL,
   font_size = NULL,
+  font_family_mono = NULL,
+  monospace = NULL,
   theme = getOption("peler.theme"),
   id = NULL
 )
@@ -20,6 +22,17 @@ newlines, one element per line.}
 are measured and drawn in. \code{NULL} uses the 'pele' defaults (\code{sans-serif},
 16). Widths are estimated from Arial metrics, so a font much wider than
 Arial can overflow its boxes.}
+
+\item{font_family_mono}{Monospace font family. \code{NULL} uses \code{monospace}.}
+
+\item{monospace}{Parts of the diagram to measure and draw in
+\code{font_family_mono}, so their boxes fit the wider text:
+\itemize{
+\item \code{"members"}: attributes and methods in class diagrams
+\item \code{"attributes"}: attribute types, names and keys in ER diagrams
+\item \code{"files"}: file and directory names in tree view diagrams
+\item \code{"messages"}: message text in sequence diagrams
+}}
 
 \item{theme}{A \code{\link[=pele_theme]{pele_theme()}} or \code{NULL}. Defaults to the \code{peler.theme}
 option, so a document can set it once.}
@@ -44,13 +57,16 @@ change without rendering again.
 \details{
 \subsection{Ids}{
 
-'pele' uses \code{id} for two things:
+'pele' uses \code{id} for three things:
 \itemize{
 \item When the diagram has an \code{accTitle} or \code{accDescr}, the SVG holds a
 \verb{<title>} and \verb{<desc>} with ids \code{{id}-title} and \code{{id}-desc}, which screen
 readers find through \code{aria-labelledby} and \code{aria-describedby}.
-\item Cynefin diagrams seed their random region boundaries with it, so the id
-changes how they look.
+\item Sankey diagrams draw their links with gradients, which have ids
+\verb{\{id\}-sankey-} and a hash of the gradient. If \code{id} has characters other
+than letters, digits, \verb{_} and \code{-}, the links get plain colours instead.
+\item Cynefin diagrams seed their random region boundaries with it, unless the
+diagram sets its own \code{seed}, so the id changes how they look.
 }
 
 Ids must be unique on a HTML page. The default, \verb{pele-} and the start of
@@ -66,7 +82,12 @@ right text, but the page has duplicate ids, which HTML validators report.
 Give one of them its own \code{id} if that matters.
 \item Reusing one custom \code{id} for different diagrams on a page makes a screen
 reader announce the first diagram's title for all of them.
-\item Changing the \code{id} of a Cynefin diagram redraws its boundaries.
+\item Two Sankey diagrams with the same id share the ids of the gradients they
+have in common. Chrome can then draw the links of one with the
+gradients of the other, which goes wrong when that one is hidden, as in
+a closed tab.
+\item Changing the \code{id} of a Cynefin diagram without its own \code{seed} redraws
+its boundaries.
 }
 }
 }

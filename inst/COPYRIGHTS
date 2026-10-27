@@ -2,7 +2,7 @@ peler bundles the 'pele' JavaScript library in inst/js/pele.global.js.
 
 Source: https://github.com/obsidianmd/pele (unminified TypeScript in src/)
 Published bundle: https://cdn.jsdelivr.net/npm/pele/dist/pele.global.js
-data-raw/update_pele.R downloads it and makes one change: the two Unicode
+data-raw/update_pele.R downloads it and makes one change: the Unicode
 property escapes in the font-family regex are replaced with a character range,
 because the V8 engine used by the R 'V8' package is built without ICU.
 

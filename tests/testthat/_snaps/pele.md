@@ -22,6 +22,19 @@
       ! `theme` must be a theme or `NULL`, not a list.
       i Make one with `pele_theme()`.
     Code
+      pele(flow, monospace = TRUE)
+    Condition
+      Error in `pele()`:
+      ! `monospace` must be a character vector or `NULL`, not `TRUE`.
+    Code
+      pele(flow, monospace = c("members", "mesages", "nodes"))
+    Condition
+      Error in `pele()`:
+      ! `monospace` must name parts of a diagram.
+      x Can't find parts "mesages" and "nodes".
+      i Did you mean "messages" for "mesages"?
+      i The parts are "members", "attributes", "files", and "messages".
+    Code
       pele("not a diagram")
     Condition
       Error in `pele()`:
@@ -43,7 +56,9 @@
       Error in `pele()`:
       ! Can't parse the flowchart diagram.
       x Expecting 'SQE', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got '$end'
-      i On line 3, at the end of the text.
+      i On line 2:
+          A --> B[oops
+        --------------^
     Code
       pele(paste0("flowchart LR\n", strrep("  A --> B\n", 20000)))
     Condition
@@ -57,8 +72,15 @@
     Code
       d <- pele(flow, font_family = "Inter; color: red")
     Condition
-      Warning:
+      Warning in `pele()`:
       Can't use `font_family` "Inter; color: red".
       x It must be a comma-separated list of font names, quoted or not.
       i Labels were measured and drawn in "sans-serif".
+    Code
+      d <- pele(flow, font_family_mono = "Fira Code; color: red")
+    Condition
+      Warning in `pele()`:
+      Can't use `font_family_mono` "Fira Code; color: red".
+      x It must be a comma-separated list of font names, quoted or not.
+      i Labels were measured and drawn in "monospace".
 

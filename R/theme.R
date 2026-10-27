@@ -28,6 +28,9 @@
 #' @param ... Named CSS values, or `"inherit"`. The names are the 'pele'
 #'   variables without their `--pele-` prefix, with `_` for `-`:
 #'   - `bg`, `fg`: background and text
+#'   - `fg_on_light`, `fg_on_dark`: text on fills the diagram text sets with
+#'     `style`, `classDef`, or a sequence `rect` or `box`. 'pele' picks the
+#'     one that contrasts more with the fill.
 #'   - `muted`: secondary text
 #'   - `line`: edges and arrows
 #'   - `surface`, `surface_alt`: node fills
@@ -100,7 +103,8 @@ did_you_mean <- function(x, known) {
 }
 
 theme_names <- c(
-  "bg", "fg", "muted", "line", "surface", "surface_alt", "border", "accent", "critical",
+  "bg", "fg", "fg_on_light", "fg_on_dark", "muted", "line", "surface", "surface_alt",
+  "border", "accent", "critical",
   paste0("series_", 1:8), "radius"
 )
 

@@ -86,6 +86,32 @@ check_theme <- function(x, arg = rlang::caller_arg(x), call = rlang::caller_env(
   }
 }
 
+# pele ignores parts it doesn't know, so a typo would draw in the regular font silently
+#' @noRd
+check_monospace <- function(x, arg = rlang::caller_arg(x), call = rlang::caller_env()) {
+  if (is.null(x)) return(invisible())
+  if (!is.character(x) || anyNA(x)) {
+    peler_abort(
+      "{.arg {arg}} must be a character vector or {.code NULL}, not {.obj_type_friendly {x}}.",
+      call = call
+    )
+  }
+  unknown <- setdiff(x, monospace_parts)
+  if (length(unknown)) {
+    peler_abort(
+      c(
+        "{.arg {arg}} must name parts of a diagram.",
+        x = "Can't find part{?s} {.val {unknown}}.",
+        bullets(did_you_mean(unknown, monospace_parts), "i"),
+        i = "The parts are {.val {monospace_parts}}."
+      ),
+      call = call
+    )
+  }
+}
+
+monospace_parts <- c("members", "attributes", "files", "messages")
+
 #' @noRd
 check_pele <- function(x, arg = rlang::caller_arg(x), call = rlang::caller_env()) {
   if (!inherits(x, "pele")) {

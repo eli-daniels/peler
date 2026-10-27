@@ -8,6 +8,10 @@ output: github_document
 library(peler)
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
+# The bundle's first line is pele's banner, "/*! Pele 1.12.0 | MIT License | ..."
+banner <- readLines(system.file("js", "pele.global.js", package = "peler"), n = 1)
+pele_version <- regmatches(banner, regexpr("[0-9]+(\\.[0-9]+)+", banner))
+
 # GitHub removes inline SVG from a README, and a diagram saved without a theme has a
 # transparent background, so pele's dark text would vanish in GitHub's dark mode. Here a
 # diagram prints as a <picture> of two SVG files instead: pele's colours, and dark ones
@@ -45,7 +49,9 @@ All the rendering is pele's work. peler runs pele's JavaScript bundle in
 [V8](https://cran.r-project.org/package=V8) and connects its SVG output to Quarto,
 R Markdown, Shiny and image files.
 
-This package will be updated as new versions of pele are released upstream.
+peler `r packageVersion("peler")` bundles pele `r pele_version`. peler will be
+updated as new versions of pele are released upstream, and [NEWS.md](NEWS.md)
+lists the changes.
 
 For the diagram syntax, the supported diagram types and the theming variables,
 read pele's own documentation at [pele.run](https://pele.run):
@@ -302,6 +308,12 @@ fallback.
 
 Fonts are a `pele()` argument and not part of the theme. pele measures labels
 in the font to lay out the diagram, so changing the font afterwards would leave the boxes the wrong size.
+For the same reason, `monospace` lists the parts to draw in the monospace font,
+such as class members or sequence messages:
+
+```r
+pele(text, monospace = c("members", "messages"), font_family_mono = "Fira Code")
+```
 
 ## Differences from pele in the browser
 
